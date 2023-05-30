@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    restart: on-failure:10
+    ports:
+      - "8201:8201"
+    environment:
+      VAULT_ADDR: 'https://vault:8201'
+      VAULT_LOCAL_CONFIG: '{"listener": [{"tcp":{"address":"0.0.0.0:8201","tls_disable":"0", "tls_cert_file":"/data/cert.pem", "tls_key_file":"/data/key.pem"}}], "default_lease_ttl": "168h", "max_lease_ttl": "720h"}, "ui": true}'
+      VAULT_DEV_ROOT_TOKEN_ID: '00000000-0000-0000-0000-000000000000'
+      VAULT_TOKEN: '00000000-0000-0000-0000-000000000000'
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./data:/data
+    healthcheck:
+      retries: 5
+    command: server -dev -dev-root-token-id="00000000-0000-0000-0000-000000000000"
+    networks:
+      - default
+  
+  users-svc:
+    image: youz16/users-svc:latest
+    depends_on:
+      - vault
+    container_name: users-svc
+    restart: on-failure:10
+    ports:
+      - "5001:80"
+    environment:
+      Vault_Token: '00000000-0000-0000-0000-000000000000'
+      Vault_Endpoint: 'https://vault:8201'
+    networks:
+      - default
+      - SpritNet-DevOps
+      - SpritNet-Backend
+  
+  security-svc:
+    image: sprittusch/security-svc
+    depends_on:
+      - vault
+      - users-svc
+    container_name: security-svc
+    restart: on-failure:10
+    ports:
+      - "5002:80"
+    environment:
+      Vault_Token: '00000000-0000-0000-0000-000000000000'
+      Vault_Endpoint: 'https://vault:8201'
+    networks:
+      - default
+      - SpritNet-DevOps
+      - SpritNet-Backend
+
+  auctions-svc:
+    image: sprittusch/auctions-svc
+    depends_on:
+      - vault
+    container_name: auctions-svc
+    restart: on-failure:10
+    ports:
+      - "5003:80"
+    environment:
+      Vault_Token: '00000000-0000-0000-0000-000000000000'
+      Vault_Endpoint: 'https://vault:8201'
+      HostName: 'rabbit-mq'
+    networks:
+      - default
+      - SpritNet-DevOps
+      - SpritNet-Backend
+
+  bidding-svc:
+    image: sprittusch/bidding-svc
+    depends_on:
+      - vault
+    container_name: bidding-svc
+    restart: on-failure:10
+    ports:
+      - "5004:80"
+    environment:
+      Vault_Token: '00000000-0000-0000-0000-000000000000'
+      Vault_Endpoint: 'https://vault:8201'
+      HostName: 'rabbit-mq'
+    networks:
+      - default
+      - SpritNet-DevOps
+      - SpritNet-Backend
+
+  catalog-svc:
+    image: sprittusch/catalog-svc
+    depends_on:
+      - vault
+    container_name: catalog-svc
+    restart: on-failure:10
+    ports:
+      - "5005:80"
+    environment:
+      Vault_Token: '00000000-0000-0000-0000-000000000000'
+      Vault_Endpoint: 'https://vault:8201'
+    networks:
+      - default
+      - SpritNet-DevOps
+      - SpritNet-Backend
+
+networks:
+  default:
+    driver: bridge
+    name: SpritNet-Services
+  SpritNet-Backend:
+    name: SpritNet-Backend
+  SpritNet-DevOps:
+    name: SpritNet-DevOps

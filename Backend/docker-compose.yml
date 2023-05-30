@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  rabbit-mq:
+    image: rabbitmq:management
+    container_name: rabbit-mq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - Rabbit-Storage:/var/lib/rabbitmq/
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - default
+
+  mongo-db:
+    image: mongo:latest
+    container_name: mongo-db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=1234
+    ports:
+      - 27017:27017
+    volumes:
+      - Mongo-Data:/data/db
+    networks:
+      - default
+
+volumes:
+  Mongo-Data:
+    name: Mongo-data
+    external: false
+  Rabbit-Storage:
+    name: Rabbit-Storage
+    external: false
+
+networks:
+  default:
+    driver: bridge
+    name: SpritNet-Backend
